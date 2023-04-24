@@ -10,18 +10,14 @@ int N_PREFS;
 int N_COURSES;
 int N_STUDENTS;
 
-template<class T>
-int indexof(T object, vector<T> v) {
-    std::vector<T>::iterator iter = std::find(v.begin(), v.end(), object);
-    int index;
-    // If element was found
-    if (iter != v.end())
-    {
-        index = iter - v.begin();
+template<typename T>
+int indexof(T& obj, std::vector<T>& vec) {
+    auto it = std::find(vec.begin(), vec.end(), obj);
+    if (it != vec.end()) {
+        return std::distance(vec.begin(), it);
     } else {
-        index = -1;
+        return -1;
     }
-    return index;
 }
 
 class Course {
