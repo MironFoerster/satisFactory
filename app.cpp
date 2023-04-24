@@ -7,23 +7,68 @@
 using namespace std;
 
 int N_PREFS;
+int N_COURSES;
+int N_STUDENTS;
+
+template<class T>
+int indexof(T object, vector<T> v) {
+    std::vector<T>::iterator iter = std::find(v.begin(), v.end(), object);
+    int index;
+    // If element was found
+    if (iter != v.end())
+    {
+        index = iter - v.begin();
+    } else {
+        index = -1;
+    }
+    return index;
+}
 
 class Course {
     private:
         string name;
+        int max_studs;
+        vector<Student> students;
+        // list of Students of this course that have the best moveToScore for the course with the respective index
+        vector<Student&> moveToCourseCandidates;
+        vector<int> moveToCourseScores;
     public:
-        Course(string name, int n_students) {
+        Course(string name, int max_studs) {
             name = name;
-            n_students = n_students;
+            max_studs = max_studs;
         };
         string getInfo() {
             return name;
         }
+
+        void moveInStudent(Student& student) {
+            //Student a = students[3];
+            for (int i_course = 0; i_course < moveToCourseCandidates.size(); i_course++) {
+                if (student) {
+                    moveToCourseCandidates[i_course] = student;
+
+                }
+            }
+
+        }
+
+        void moveOutStudent(Student&) {
+
+        }
+
+        bool isNotFull() {
+            if (students.size() == max_studs) {
+                return false;
+            } else {
+                return true;
+            }
+        };
 };
 
 class Student {
     private:
         string name;
+        // list of course indices with decreasing preference
         vector<int> prefs;
         int curr_score;
     public:
@@ -35,14 +80,13 @@ class Student {
             return name;
         }
 
-        void moveTo(int i_course) {
-            std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
-  
+        void updateCurrentScore(int i_course) {
+            //std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
+            int index = indexof<int>(i_course, prefs);
             // If element was found
-            if (iter != prefs.end())
+            if (index != -1)
             {
-                int index = iter - prefs.begin();
-                curr_score = index;
+                curr_score = std::pow(index, 2);
             } else {
                 curr_score = std::pow(N_PREFS, 2);
             }
@@ -51,19 +95,17 @@ class Student {
         int getMoveToScore(int i_course) { // negative score is making things better
             int moveto_score;
             int next_score;
-            int index;
+            //std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
+            
+            int index = indexof<int>(i_course, prefs);
 
-            std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
-  
             // If element was found
-            if (iter != prefs.end()) 
+            if (index != -1) 
             {
-                index = iter - prefs.begin();
+                next_score = std::pow(index, 2);
             } else {
-                index = N_PREFS;
+                next_score = std::pow(N_PREFS, 2);
             }
-
-            int next_score = std::pow(index, 2);
 
             moveto_score = next_score - curr_score;
             return moveto_score;
@@ -112,12 +154,12 @@ class Case {
                 cin >> name;
                 if (name != "x") {
                     cout << "Teilnehmerzahl eingeben: ";
-                    int n_students;
-                    cin >> n_students;
+                    int max_studs;
+                    cin >> max_studs;
                     
-                    Course course(name, n_students);
+                    Course course(name, max_studs);
                     courses.push_back(course);
-                    cout << "AG " + name + " mit " + to_string(n_students) + " Plätzen hinzugefügt";
+                    cout << "AG " + name + " mit " + to_string(max_studs) + " Plätzen hinzugefügt";
                 } else {
                     adding_courses = false;
                 }
@@ -187,6 +229,9 @@ class Case {
         }
 
         void smartAssignment() {
+            for (auto student : students) {
+
+            }
 
         }
 
