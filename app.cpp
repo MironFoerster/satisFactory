@@ -10,6 +10,9 @@ int N_PREFS;
 int N_COURSES;
 int N_STUDENTS;
 
+class Student;
+class Course;
+
 template<typename T>
 int indexof(T& obj, std::vector<T>& vec) {
     auto it = std::find(vec.begin(), vec.end(), obj);
@@ -20,51 +23,6 @@ int indexof(T& obj, std::vector<T>& vec) {
     }
 }
 
-class Course {
-    private:
-        std::string name;
-        int max_studs;
-        std::vector<Student> students;
-        // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
-        std::map<Course&, std::vector<std::pair<Student&, int>>> moveToCourseMap;
-    public:
-        Course(std::string name, int max_studs) {
-            name = name;
-            max_studs = max_studs;
-        };
-        std::string getInfo() {
-            return name;
-        }
-
-        void moveStudentIn(Student& student) {
-            for (auto& [course, sorted_students] : moveToCourseMap) {
-                std::pair<Student&, int> student_scoreD(student, student.getMoveToScoreD(course));
-                auto is_better = [&student_scoreD](std::pair<Student&, int> other_student_scoreD) {
-                    return student_scoreD.second >= other_student_scoreD.second;
-                };
-                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_better);
-                sorted_students.insert(iter, student_scoreD);
-            }
-        }
-
-        void moveStudentOut(Student& student) {
-            for (auto& [course, sorted_students] : moveToCourseMap) {
-                auto is_student = [&student](std::pair<Student&, int> other_student_scoreD) {
-                    return student == other_student_scoreD.first;
-                };
-                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_student);
-                sorted_students.erase(iter);
-            }
-        }
-
-        bool isNotFull() {
-            if (students.size() == max_studs) {
-                return false;
-            } else {
-                return true;
-            }
-        };
-};
 
 class Student {
     private:
@@ -116,6 +74,61 @@ class Student {
             return moveto_scoreD;
         }
 };
+
+class Course {
+    private:
+        std::string name;
+        int max_studs;
+        std::vector<Student&> students;
+        // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
+        std::map<Course&, std::vector<std::pair<Student&, int>>> moveToCourseMap;
+    public:
+        Course(std::string name, int max_studs) {
+            name = name;
+            max_studs = max_studs;
+        };
+        std::string getInfo() {
+            return name;
+        }
+
+        void moveStudentIn(Student& student) {
+            for (auto& [course, sorted_students] : moveToCourseMap) {
+                std::pair<Student&, int> student_scoreD(student, student.getMoveToScoreD(course));
+                auto is_better = [&student_scoreD](std::pair<Student&, int> other_student_scoreD) {
+                    return student_scoreD.second >= other_student_scoreD.second;
+                };
+                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_better);
+                sorted_students.insert(iter, student_scoreD);
+            }
+        }
+
+        void moveStudentOut(Student& student) {
+            for (auto& [course, sorted_students] : moveToCourseMap) {
+                auto is_student = [&student](std::pair<Student&, int> other_student_scoreD) {
+                    return student == other_student_scoreD.first;
+                };
+                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_student);
+                sorted_students.erase(iter);
+            }
+        }
+
+        bool isNotFull() {
+            if (students.size() == max_studs) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        void displayStudents() {
+            std::cout << name << ":\n";
+            for (auto student : students) {
+                std::cout << student.getInfo() << "\n";
+            }
+        }
+};
+
+
 
 class Case {
     private:
@@ -228,7 +241,7 @@ class Case {
         void FCFSAssignment() {
             // First Come First Serve Assignment
             for (int i_wish = 0; i_wish< N_PREFS; i_wish++) {
-                for (auto student : students) {
+                for (Student& student : students) {
                     if (student.getCurrScore() > std::pow(i_wish, 2)) {
                         Course& wished_course = student.getWish(i_wish);
                         if (wished_course.isNotFull()) {
@@ -250,6 +263,12 @@ class Case {
 
         void optimizeAssignment() {
 
+        }
+
+        void displayAssignment() {
+            for (auto course : courses) {
+                course.displayStudents();
+            }
         }
 };
 
@@ -309,7 +328,8 @@ int main()
                 course_edit = true;
                 students_edit = false;
                 useCase.FCFSAssignment();
-                useCase.optimizeAssignment();
+                //useCase.optimizeAssignment();
+                useCase.displayAssignment();
         }
     }
 }
