@@ -7,6 +7,8 @@
 #include <map>
 #include <Windows.h>
 #include <cstdio>
+#include <Windows.h>
+#include <cstdio>
 
 int N_PREFS;
 int N_COURSES;
