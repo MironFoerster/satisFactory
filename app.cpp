@@ -5,6 +5,8 @@
 #include <vector>
 #include <cmath>
 #include <map>
+#include <Windows.h>
+#include <cstdio>
 
 int N_PREFS;
 int N_COURSES;
@@ -27,13 +29,16 @@ int indexof(T& obj, std::vector<T>& vec) {
 class Student {
     private:
         std::string name;
+        std::string info;
         // list of course indices with decreasing preference
         std::vector<Course*> prefs;
         int curr_score;
+
     public:
-        Student(std::string name, std::vector<Course*> prefs) {
-            name = name;
-            prefs = prefs;
+        Student(std::string name_in, std::vector<Course*> prefs_in, std::string info_in) {
+            name = name_in;
+            prefs = prefs_in;
+            info = info_in;
         };
 
         bool operator==(const Student& other) {
@@ -41,6 +46,10 @@ class Student {
         }
 
         std::string getInfo() {
+            return info;
+        }
+
+        std::string getName() {
             return name;
         }
 
@@ -78,16 +87,21 @@ class Student {
 class Course {
     private:
         std::string name;
+        std::string info;
         int max_studs;
         std::vector<Student*> students;
         // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
         std::map<Course*, std::vector<std::pair<Student*, int>>> moveToCourseMap;
     public:
-        Course(std::string name, int max_studs) {
-            name = name;
-            max_studs = max_studs;
+        Course(std::string name_in, int max_studs_in, std::string info_in) {
+            name = name_in;
+            max_studs = max_studs_in;
+            info = info_in;
         };
         std::string getInfo() {
+            return info;
+        }
+        std::string getName() {
             return name;
         }
 
@@ -140,94 +154,107 @@ class Case {
             return courses.size();
         }
         int getNumStudents() {
-            return courses.size();
+            return students.size();
         }
         void showCourses() {
-            std::cout << "Aktuelle AGs:\n";
-            if (getNumCourses() >= 1) {
-                for (auto course : courses) {
-                    std::cout << course.getInfo();
+            int num_courses = getNumCourses();
+            std::cout << "Aktuelle AGs(" << num_courses << "):\n";
+            std::cout << "No. | Name | Plätze\n";
+
+            if (num_courses >= 1) {
+                for (int i = 0; i < courses.size(); i++) {
+                    std::cout << i+1 << ". " << courses[i].getInfo() << "\n";
                 }
             } else {
                 std::cout << "Keine AGs";
             }
+            return;
         }
 
         void showStudents() {
-            std::cout << "Aktuelle Teilnehmer:\n";
-            if (getNumStudents() >= 1) {
-                for (auto student : students) {
-                    std::cout << student.getInfo();
+            int num_students = getNumStudents();
+            std::cout << "Aktuelle Teilnehmer(" << num_students << "):\n";
+            std::cout << "No. | Name | 1. | 2. | 3. | ...\n";
+            if (num_students >= 1) {
+                for (int i = 0; i < students.size(); i++) {
+                    std::cout << i+1 << ". " << students[i].getInfo() << "\n";
                 }
             } else {
                 std::cout << "Keine Teilnehmer";
             }
+            return;
         }
 
         void addCourses() {
             bool adding_courses = true;
             while (adding_courses) {
-                std::cout << "AG-Name eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::cout << "\nAG-Name eingeben (x eingeben um andere Aktion zu waehlen): ";
+                std::string info;
                 std::string name;
                 std::cin >> name;
                 if (name != "x") {
+                    
                     std::cout << "Teilnehmerzahl eingeben: ";
                     int max_studs;
                     std::cin >> max_studs;
-                    
-                    Course course(name, max_studs);
+                    info = name + "  " + std::to_string(max_studs);
+                    Course course(name, max_studs, info);
                     courses.push_back(course);
-                    std::cout << "AG " + name + " mit " + std::to_string(max_studs) + " Plätzen hinzugefügt";
+                    std::cout << "AG " + name + " mit " + std::to_string(max_studs) + " Plaetzen hinzugefuegt";
                 } else {
                     adding_courses = false;
                 }
             }
+            return;
         }
         void removeCourses() {
             bool removing_courses = true;
             while (removing_courses) {
-                std::cout << "Kursnummer eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::cout << "Kursnummer eingeben (x eingeben um andere Aktion zu waehlen): ";
                 std::string input;
                 std::cin >> input;
                 if (input != "x") {
                     int index = stoi(input);
+                    std::cout << "Kurs " << courses[index-1].getName() << " erfolgreich entfernt!";
                     courses.erase(courses.begin() + index);
                 } else {
                     removing_courses = false;
                 }
             }
+            return;
         }
 
         void addStudents() {
             bool adding_students = true;
             while (adding_students) {
-                std::cout << "Teilnehmer-Name eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::cout << "Teilnehmer-Name eingeben (x eingeben um andere Aktion zu waehlen): ";
+                std::string info = "";
                 std::string name;
                 std::cin >> name;
                 if (name != "x") {
+                    info += name + " ";
                     std::vector<Course*> prefs;
                     for (int n_pref = 0; n_pref < 3; n_pref++) {
-                        std::cout << std::to_string(n_pref) + ". Wunsch(Zahl): ";
-                        int pref;
+                        std::cout << std::to_string(n_pref+1) + ". Wunsch(Kursziffer): ";
+                        std::string pref;
                         std::cin >> pref;
-                        prefs.push_back(&courses[pref]);
+                        info += " " + pref;
+                        prefs.push_back(&courses[stoi(pref)-1]);
                     }
-
-                    Student student(name, prefs);
+                    
+                    Student student(name, prefs, info);
                     students.push_back(student);
-                    std::cout << "Teilnehmer " + name + " mit Wünschen ";
-                    // prints all prefs
-                    //std::copy(prefs.begin(), prefs.end(), std::ostream_iterator<char>(std::std::cout, " "));
-                    std::cout << " hinzugefügt\n";
+                    std::cout << "Teilnehmer " + name + " hinzugefuegt\n";
                 } else {
                     adding_students = false;
                 }
             }
+            return;
         }
         void removeStudents() {
             bool removing_students = true;
             while (removing_students) {
-                std::cout << "Teilnehmernummer eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::cout << "Teilnehmernummer eingeben (x eingeben um andere Aktion zu waehlen): ";
                 std::string input;
                 std::cin >> input;
                 if (input != "x") {
@@ -237,6 +264,7 @@ class Case {
                     removing_students = false;
                 }
             }
+            return;
         }
         void FCFSAssignment() {
             // First Come First Serve Assignment
@@ -274,62 +302,69 @@ class Case {
 
 
 
-int main()
-{   
+int main() {
     std::cout << "Willkommen zur AG Einteilungs App!\n";
 
     Case useCase;
 
-    std::cout << "Zuerst müssen alle AGs und deren maximale Teilnehmerzahl eingetragen werden:\n";
+    std::cout << "Zuerst muessen alle AGs und deren maximale Teilnehmerzahl eingetragen werden:\n";
     bool course_edit = true;
     bool students_edit = false;
     while (course_edit) {
         
         std::cout << "Aktionen:\n";
-        std::cout << "\t1 - AGs hinzufügen\n";
+        std::cout << "\t1 - AGs hinzufuegen\n";
         std::cout << "\t2 - AGs entfernen\n";
         std::cout << "\t3 - Aktuelle AGs anzeigen\n";
-        std::cout << "\t4 - !AGs bestätigen und zum Eintragen der Teilnehmer übergehen!";
-        std::cout << "Ziffer eingeben um Aktion zu wählen:";
+        std::cout << "\t4 - !AGs bestaetigen und zum Eintragen der Teilnehmer uebergehen!";
+        std::cout << "\nZiffer eingeben um Aktion zu waehlen:";
         int action;
         std::cin >> action;
 
         switch(action) {
             case 1:
                 useCase.addCourses();
+                break;
             case 2:
                 useCase.removeCourses();
+                break;
             case 3:
                 useCase.showCourses();
+                break;
             case 4:
                 course_edit = false;
                 students_edit = true;
+                break;
         }
     }
-    std::cout << "Anzahl der Wünsche pro Teilnehmer eingeben:";
+    std::cout << "Anzahl der Wuensche pro Teilnehmer eingeben:";
     std::cin >> N_PREFS;
     while (students_edit) {
         std::cout << "Aktionen:\n";
-        std::cout << "\t1 - Teilnehmer hinzufügen\n";
+        std::cout << "\t1 - Teilnehmer hinzufuegen\n";
         std::cout << "\t2 - Teilnehmer entfernen\n";
         std::cout << "\t3 - Aktuelle Teilnehmer anzeigen\n";
-        std::cout << "\t4 - !Teilnehmer Bestätigen und AG-Zuordnung generieren!\n";
-        std::cout << "Ziffer eingeben um Aktion zu wählen:";
+        std::cout << "\t4 - !Teilnehmer Bestaetigen und AG-Zuordnung generieren!\n";
+        std::cout << "Ziffer eingeben um Aktion zu waehlen:";
         int action;
         std::cin >> action;
         switch(action) {
             case 1:
                 useCase.addStudents();
+                break;
             case 2:
                 useCase.removeStudents();
+                break;
             case 3:
                 useCase.showStudents();
+                break;
             case 4:
                 course_edit = true;
                 students_edit = false;
                 useCase.FCFSAssignment();
                 //useCase.optimizeAssignment();
                 useCase.displayAssignment();
+                break;
         }
     }
 }
