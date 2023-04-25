@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
-using namespace std;
+#include <map>
 
 int N_PREFS;
 int N_COURSES;
@@ -22,34 +22,39 @@ int indexof(T& obj, std::vector<T>& vec) {
 
 class Course {
     private:
-        string name;
+        std::string name;
         int max_studs;
-        vector<Student> students;
-        // list of Students of this course that have the best moveToScore for the course with the respective index
-        vector<Student&> moveToCourseCandidates;
-        vector<int> moveToCourseScores;
+        std::vector<Student> students;
+        // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
+        std::map<Course&, std::vector<std::pair<Student&, int>>> moveToCourseMap;
     public:
-        Course(string name, int max_studs) {
+        Course(std::string name, int max_studs) {
             name = name;
             max_studs = max_studs;
         };
-        string getInfo() {
+        std::string getInfo() {
             return name;
         }
 
         void moveInStudent(Student& student) {
-            //Student a = students[3];
-            for (int i_course = 0; i_course < moveToCourseCandidates.size(); i_course++) {
-                if (student) {
-                    moveToCourseCandidates[i_course] = student;
+            
+            for (auto& [course, sorted_students] : moveToCourseMap) {
+                std::pair<Student&, int> student_score(student, student.getCourseScore(course));
 
-                }
+                auto is_better = [&student_score](std::pair<Student&, int> other_student_score) { return student_score.second >= other_student_score.second; };
+                
+                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_better);
+                sorted_students.insert(iter, student_score);
             }
 
         }
 
-        void moveOutStudent(Student&) {
-
+        void moveOutStudent(Student& student) {
+            for (auto& [course, sorted_students] : moveToCourseMap) {
+                auto is_student = [&student](std::pair<Student&, int> other_student_score) { return student == other_student_score.first; };
+                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_student);
+                sorted_students.erase(iter);
+            }
         }
 
         bool isNotFull() {
@@ -63,37 +68,44 @@ class Course {
 
 class Student {
     private:
-        string name;
+        std::string name;
         // list of course indices with decreasing preference
-        vector<int> prefs;
+        std::vector<Course> prefs;
         int curr_score;
     public:
-        Student(string name, vector<int> prefs) {
+        Student(std::string name, std::vector<Course> prefs) {
             name = name;
             prefs = prefs;
         };
-        string getInfo() {
+
+        bool operator==(const Student& other) {
+            return name == other.name;
+        }
+
+        std::string getInfo() {
             return name;
         }
 
-        void updateCurrentScore(int i_course) {
-            //std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
-            int index = indexof<int>(i_course, prefs);
+        int getCourseScore(Course course) {
+            int index = indexof<Course>(course, prefs);
             // If element was found
-            if (index != -1)
-            {
-                curr_score = std::pow(index, 2);
+            if (index == -1) {
+                return std::pow(N_PREFS, 2);
             } else {
-                curr_score = std::pow(N_PREFS, 2);
+                return std::pow(index, 2);
             }
         }
 
-        int getMoveToScore(int i_course) { // negative score is making things better
+        void updateCurrentScore(Course course) {
+            curr_score = getCourseScore(course);
+        }
+
+        int getMoveToScoreDelta(Course course) { // negative score is making things better
             int moveto_score;
             int next_score;
             //std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
             
-            int index = indexof<int>(i_course, prefs);
+            int index = indexof<Course>(course, prefs);
 
             // If element was found
             if (index != -1) 
@@ -110,8 +122,8 @@ class Student {
 
 class Case {
     private:
-        vector<Course> courses;
-        vector<Student> students;
+        std::vector<Course> courses;
+        std::vector<Student> students;
 
     public:
         int getNumCourses() {
@@ -121,41 +133,41 @@ class Case {
             return courses.size();
         }
         void showCourses() {
-            cout << "Aktuelle AGs:\n";
+            std::cout << "Aktuelle AGs:\n";
             if (getNumCourses() >= 1) {
                 for (auto course : courses) {
-                    cout << course.getInfo();
+                    std::cout << course.getInfo();
                 }
             } else {
-                cout << "Keine AGs";
+                std::cout << "Keine AGs";
             }
         }
 
         void showStudents() {
-            cout << "Aktuelle Teilnehmer:\n";
+            std::cout << "Aktuelle Teilnehmer:\n";
             if (getNumStudents() >= 1) {
                 for (auto student : students) {
-                    cout << student.getInfo();
+                    std::cout << student.getInfo();
                 }
             } else {
-                cout << "Keine Teilnehmer";
+                std::cout << "Keine Teilnehmer";
             }
         }
 
         void addCourses() {
             bool adding_courses = true;
             while (adding_courses) {
-                cout << "AG-Name eingeben (x eingeben um andere Aktion zu wählen): ";
-                string name;
-                cin >> name;
+                std::cout << "AG-Name eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::string name;
+                std::cin >> name;
                 if (name != "x") {
-                    cout << "Teilnehmerzahl eingeben: ";
+                    std::cout << "Teilnehmerzahl eingeben: ";
                     int max_studs;
-                    cin >> max_studs;
+                    std::cin >> max_studs;
                     
                     Course course(name, max_studs);
                     courses.push_back(course);
-                    cout << "AG " + name + " mit " + to_string(max_studs) + " Plätzen hinzugefügt";
+                    std::cout << "AG " + name + " mit " + std::to_string(max_studs) + " Plätzen hinzugefügt";
                 } else {
                     adding_courses = false;
                 }
@@ -164,9 +176,9 @@ class Case {
         void removeCourses() {
             bool removing_courses = true;
             while (removing_courses) {
-                cout << "Kursnummer eingeben (x eingeben um andere Aktion zu wählen): ";
-                string input;
-                cin >> input;
+                std::cout << "Kursnummer eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::string input;
+                std::cin >> input;
                 if (input != "x") {
                     int index = stoi(input);
                     courses.erase(courses.begin() + index);
@@ -179,24 +191,24 @@ class Case {
         void addStudents() {
             bool adding_students = true;
             while (adding_students) {
-                cout << "Teilnehmer-Name eingeben (x eingeben um andere Aktion zu wählen): ";
-                string name;
-                cin >> name;
+                std::cout << "Teilnehmer-Name eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::string name;
+                std::cin >> name;
                 if (name != "x") {
-                    vector<int> prefs;
+                    std::vector<Course> prefs;
                     for (int n_pref = 0; n_pref < 3; n_pref++) {
-                        cout << to_string(n_pref) + ". Wunsch(Zahl): ";
+                        std::cout << std::to_string(n_pref) + ". Wunsch(Zahl): ";
                         int pref;
-                        cin >> pref;
-                        prefs.push_back(pref);
+                        std::cin >> pref;
+                        prefs.push_back(courses[pref]);
                     }
 
                     Student student(name, prefs);
                     students.push_back(student);
-                    cout << "Teilnehmer " + name + " mit Wünschen ";
+                    std::cout << "Teilnehmer " + name + " mit Wünschen ";
                     // prints all prefs
-                    //std::copy(prefs.begin(), prefs.end(), std::ostream_iterator<char>(std::cout, " "));
-                    cout << " hinzugefügt\n";
+                    //std::copy(prefs.begin(), prefs.end(), std::ostream_iterator<char>(std::std::cout, " "));
+                    std::cout << " hinzugefügt\n";
                 } else {
                     adding_students = false;
                 }
@@ -205,9 +217,9 @@ class Case {
         void removeStudents() {
             bool removing_students = true;
             while (removing_students) {
-                cout << "Teilnehmernummer eingeben (x eingeben um andere Aktion zu wählen): ";
-                string input;
-                cin >> input;
+                std::cout << "Teilnehmernummer eingeben (x eingeben um andere Aktion zu wählen): ";
+                std::string input;
+                std::cin >> input;
                 if (input != "x") {
                     int index = stoi(input);
                     students.erase(students.begin() + index);
@@ -227,6 +239,7 @@ class Case {
         void smartAssignment() {
             for (auto student : students) {
 
+
             }
 
         }
@@ -234,30 +247,29 @@ class Case {
         void optimizeAssignment() {
 
         }
-        for each course compute what studs could join based on how dissatisfied they are
 };
 
 
 
 int main()
 {   
-    cout << "Willkommen zur AG Einteilungs App!\n";
+    std::cout << "Willkommen zur AG Einteilungs App!\n";
 
     Case useCase;
 
-    cout << "Zuerst müssen alle AGs und deren maximale Teilnehmerzahl eingetragen werden:\n";
+    std::cout << "Zuerst müssen alle AGs und deren maximale Teilnehmerzahl eingetragen werden:\n";
     bool course_edit = true;
     bool students_edit = false;
     while (course_edit) {
         
-        cout << "Aktionen:\n";
-        cout << "\t1 - AGs hinzufügen\n";
-        cout << "\t2 - AGs entfernen\n";
-        cout << "\t3 - Aktuelle AGs anzeigen\n";
-        cout << "\t4 - !AGs bestätigen und zum Eintragen der Teilnehmer übergehen!";
-        cout << "Ziffer eingeben um Aktion zu wählen:";
+        std::cout << "Aktionen:\n";
+        std::cout << "\t1 - AGs hinzufügen\n";
+        std::cout << "\t2 - AGs entfernen\n";
+        std::cout << "\t3 - Aktuelle AGs anzeigen\n";
+        std::cout << "\t4 - !AGs bestätigen und zum Eintragen der Teilnehmer übergehen!";
+        std::cout << "Ziffer eingeben um Aktion zu wählen:";
         int action;
-        cin >> action;
+        std::cin >> action;
 
         switch(action) {
             case 1:
@@ -271,17 +283,17 @@ int main()
                 students_edit = true;
         }
     }
-    cout << "Anzahl der Wünsche pro Teilnehmer eingeben:";
-    cin >> N_PREFS;
+    std::cout << "Anzahl der Wünsche pro Teilnehmer eingeben:";
+    std::cin >> N_PREFS;
     while (students_edit) {
-        cout << "Aktionen:\n";
-        cout << "\t1 - Teilnehmer hinzufügen\n";
-        cout << "\t2 - Teilnehmer entfernen\n";
-        cout << "\t3 - Aktuelle Teilnehmer anzeigen\n";
-        cout << "\t4 - !Teilnehmer Bestätigen und AG-Zuordnung generieren!\n";
-        cout << "Ziffer eingeben um Aktion zu wählen:";
+        std::cout << "Aktionen:\n";
+        std::cout << "\t1 - Teilnehmer hinzufügen\n";
+        std::cout << "\t2 - Teilnehmer entfernen\n";
+        std::cout << "\t3 - Aktuelle Teilnehmer anzeigen\n";
+        std::cout << "\t4 - !Teilnehmer Bestätigen und AG-Zuordnung generieren!\n";
+        std::cout << "Ziffer eingeben um Aktion zu wählen:";
         int action;
-        cin >> action;
+        std::cin >> action;
         switch(action) {
             case 1:
                 useCase.addStudents();
@@ -296,7 +308,4 @@ int main()
                 useCase.optimizeAssignment();
         }
     }
-    
-
-    
 }
