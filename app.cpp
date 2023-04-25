@@ -36,22 +36,22 @@ class Course {
             return name;
         }
 
-        void moveInStudent(Student& student) {
-            
+        void moveStudentIn(Student& student) {
             for (auto& [course, sorted_students] : moveToCourseMap) {
-                std::pair<Student&, int> student_score(student, student.getCourseScore(course));
-
-                auto is_better = [&student_score](std::pair<Student&, int> other_student_score) { return student_score.second >= other_student_score.second; };
-                
+                std::pair<Student&, int> student_scoreD(student, student.getMoveToScoreD(course));
+                auto is_better = [&student_scoreD](std::pair<Student&, int> other_student_scoreD) {
+                    return student_scoreD.second >= other_student_scoreD.second;
+                };
                 auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_better);
-                sorted_students.insert(iter, student_score);
+                sorted_students.insert(iter, student_scoreD);
             }
-
         }
 
-        void moveOutStudent(Student& student) {
+        void moveStudentOut(Student& student) {
             for (auto& [course, sorted_students] : moveToCourseMap) {
-                auto is_student = [&student](std::pair<Student&, int> other_student_score) { return student == other_student_score.first; };
+                auto is_student = [&student](std::pair<Student&, int> other_student_scoreD) {
+                    return student == other_student_scoreD.first;
+                };
                 auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_student);
                 sorted_students.erase(iter);
             }
@@ -70,10 +70,10 @@ class Student {
     private:
         std::string name;
         // list of course indices with decreasing preference
-        std::vector<Course> prefs;
+        std::vector<Course&> prefs;
         int curr_score;
     public:
-        Student(std::string name, std::vector<Course> prefs) {
+        Student(std::string name, std::vector<Course&> prefs) {
             name = name;
             prefs = prefs;
         };
@@ -86,8 +86,16 @@ class Student {
             return name;
         }
 
-        int getCourseScore(Course course) {
-            int index = indexof<Course>(course, prefs);
+        int getCurrScore() {
+            return curr_score;
+        }
+
+        Course getWish(int i_wish) {
+            return prefs[i_wish];
+        }
+
+        int getCourseScore(Course& course) {
+            int index = indexof<Course&>(course, prefs);
             // If element was found
             if (index == -1) {
                 return std::pow(N_PREFS, 2);
@@ -96,27 +104,16 @@ class Student {
             }
         }
 
-        void updateCurrentScore(Course course) {
+        void updateCurrentScore(Course& course) {
             curr_score = getCourseScore(course);
         }
 
-        int getMoveToScoreDelta(Course course) { // negative score is making things better
-            int moveto_score;
-            int next_score;
-            //std::vector<int>::iterator iter = std::find(prefs.begin(), prefs.end(), i_course);
-            
-            int index = indexof<Course>(course, prefs);
+        int getMoveToScoreD(Course& course) { // negative scoreD is making things better
+            int moveto_scoreD;
+            int next_score = getCourseScore(course);
 
-            // If element was found
-            if (index != -1) 
-            {
-                next_score = std::pow(index, 2);
-            } else {
-                next_score = std::pow(N_PREFS, 2);
-            }
-
-            moveto_score = next_score - curr_score;
-            return moveto_score;
+            moveto_scoreD = next_score - curr_score;
+            return moveto_scoreD;
         }
 };
 
@@ -195,7 +192,7 @@ class Case {
                 std::string name;
                 std::cin >> name;
                 if (name != "x") {
-                    std::vector<Course> prefs;
+                    std::vector<Course&> prefs;
                     for (int n_pref = 0; n_pref < 3; n_pref++) {
                         std::cout << std::to_string(n_pref) + ". Wunsch(Zahl): ";
                         int pref;
@@ -230,10 +227,17 @@ class Case {
         }
         void FCFSAssignment() {
             // First Come First Serve Assignment
-            for (auto student : students) {
-
+            for (int i_wish = 0; i_wish< N_PREFS; i_wish++) {
+                for (auto student : students) {
+                    if (student.getCurrScore() > std::pow(i_wish, 2)) {
+                        Course& wished_course = student.getWish(i_wish);
+                        if (wished_course.isNotFull()) {
+                            wished_course.moveStudentIn(student);
+                            student.updateCurrentScore(wished_course);
+                        }
+                    }
+                }
             }
-
         }
 
         void smartAssignment() {
