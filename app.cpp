@@ -77,9 +77,9 @@ class Student {
             curr_score = getCourseScore(course);
         }
 
-        int getMoveToScoreD(Course course) { // negative scoreD is making things better
+        int getMoveToScoreD(Course* course) { // negative scoreD is making things better
             int moveto_scoreD;
-            int next_score = getCourseScore(&course);
+            int next_score = getCourseScore(course);
 
             moveto_scoreD = next_score - curr_score;
             return moveto_scoreD;
@@ -93,7 +93,7 @@ class Course {
         int max_studs;
         std::vector<Student*> students;
         // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
-        std::map<Course, std::vector<std::pair<Student*, int>>> moveToCourseMap;
+        std::map<Course*, std::vector<std::pair<Student*, int>>> moveToCourseMap;
     public:
         Course(std::string name_in, int max_studs_in, std::string info_in) {
             name = name_in;
@@ -110,7 +110,7 @@ class Course {
         void initMap(std::vector<Course> courses) {
             for (auto course : courses) {
                 if (!(course.name == this->name)) {
-                    moveToCourseMap[course] = std::vector<std::pair<Student*, int>>();
+                    moveToCourseMap[&course] = std::vector<std::pair<Student*, int>>();
                 }
             }
         }
