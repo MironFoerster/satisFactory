@@ -41,6 +41,7 @@ class Student {
             name = name_in;
             prefs = prefs_in;
             info = info_in;
+            curr_score = std::pow(N_PREFS, 2);
         };
 
         bool operator==(const Student& other) {
@@ -48,6 +49,8 @@ class Student {
         }
 
         std::string getInfo() {
+                        std::cout << "info!!!" << info;
+
             return info;
         }
 
@@ -65,6 +68,7 @@ class Student {
 
         int getCourseScore(Course* course) {
             int index = indexof<Course*>(course, prefs);
+            std::cout << "indexof!!!" << index;
             // If element was found
             if (index == -1) {
                 return std::pow(N_PREFS, 2);
@@ -152,8 +156,7 @@ class Course {
         void displayStudents() {
             std::cout << name << ":\n";
             for (auto student : students) {
-                std::cout << "hell";
-                std::cout << (*student).getInfo() << "\n";
+                std::cout << "\t" << (*student).getName() << "\n";
             }
         }
 };
@@ -195,7 +198,7 @@ class Case {
                     std::cout << i+1 << ". " << students[i].getInfo() << "\n";
                 }
             } else {
-                std::cout << "Keine Teilnehmer";
+                std::cout << "Keine Teilnehmer\n";
             }
         }
 
@@ -227,8 +230,8 @@ class Case {
                 std::string input;
                 std::cin >> input;
                 if (input != "x") {
-                    int index = stoi(input);
-                    std::cout << "Kurs " << courses[index-1].getName() << " erfolgreich entfernt!";
+                    int index = stoi(input)-1;
+                    std::cout << "Kurs " << courses[index].getName() << " erfolgreich entfernt!\n";
                     courses.erase(courses.begin() + index);
                 } else {
                     removing_courses = false;
@@ -246,7 +249,7 @@ class Case {
                 if (name != "x") {
                     info += name + " ";
                     std::vector<Course*> prefs;
-                    for (int n_pref = 0; n_pref < 3; n_pref++) {
+                    for (int n_pref = 0; n_pref < N_PREFS; n_pref++) {
                         std::cout << std::to_string(n_pref+1) + ". Wunsch(Kursziffer): ";
                         std::string pref;
                         std::cin >> pref;
@@ -269,7 +272,7 @@ class Case {
                 std::string input;
                 std::cin >> input;
                 if (input != "x") {
-                    int index = stoi(input);
+                    int index = stoi(input)-1;
                     students.erase(students.begin() + index);
                 } else {
                     removing_students = false;
@@ -285,16 +288,17 @@ class Case {
         void FCFSAssignment() {
             // First Come First Serve Assignment
             for (int i_wish = 0; i_wish< N_PREFS; i_wish++) {
-                std::cout << "Wish:\n" << i_wish;
-                for (Student student : students) {
-                    std::cout << "stud: ";
+                std::cout << "Wish:" << i_wish << "\n";
+                for (Student& student : students) {
+                    std::cout << "stud: " << student.getName() << " " << student.getCurrScore() << "\n";
                     if (student.getCurrScore() > std::pow(i_wish, 2)) {
                         std::cout << "current Score > than wish^2\n";
                         Course* wished_course = student.getWish(i_wish);
                         if ((*wished_course).isNotFull()) {
-                            std::cout << "Accepted!";
+                            std::cout << "Accepted!\n";
                             (*wished_course).moveStudentIn(&student);
                             student.updateCurrentScore(wished_course);
+                        std::cout << "new Score:" << student.getCurrScore() << "\n";
                         }
                     }
                 }
