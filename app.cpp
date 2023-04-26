@@ -77,9 +77,9 @@ class Student {
             curr_score = getCourseScore(course);
         }
 
-        int getMoveToScoreD(Course* course) { // negative scoreD is making things better
+        int getMoveToScoreD(Course course) { // negative scoreD is making things better
             int moveto_scoreD;
-            int next_score = getCourseScore(course);
+            int next_score = getCourseScore(&course);
 
             moveto_scoreD = next_score - curr_score;
             return moveto_scoreD;
@@ -93,7 +93,7 @@ class Course {
         int max_studs;
         std::vector<Student*> students;
         // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
-        std::map<Course*, std::vector<std::pair<Student*, int>>> moveToCourseMap;
+        std::map<Course, std::vector<std::pair<Student*, int>>> moveToCourseMap;
     public:
         Course(std::string name_in, int max_studs_in, std::string info_in) {
             name = name_in;
@@ -107,7 +107,17 @@ class Course {
             return name;
         }
 
+        void initMap(std::vector<Course> courses) {
+            for (auto course : courses) {
+                if (!(course.name == this->name)) {
+                    moveToCourseMap[course] = std::vector<std::pair<Student*, int>>();
+                }
+            }
+        }
+
         void moveStudentIn(Student* student) {
+            students.push_back(student);
+
             for (auto [course, sorted_students] : moveToCourseMap) {
                 std::pair<Student*, int> student_scoreD(student, (*student).getMoveToScoreD(course));
                 auto is_better = [&student_scoreD](std::pair<Student*, int> other_student_scoreD) {
@@ -119,6 +129,9 @@ class Course {
         }
 
         void moveStudentOut(Student* student) {
+            auto iter = std::find(students.begin(), students.end(), student);
+            students.erase(iter);
+
             for (auto& [course, sorted_students] : moveToCourseMap) {
                 auto is_student = [&student](std::pair<Student*, int> other_student_scoreD) {
                     return student == other_student_scoreD.first;
@@ -139,6 +152,7 @@ class Course {
         void displayStudents() {
             std::cout << name << ":\n";
             for (auto student : students) {
+                std::cout << "hell";
                 std::cout << (*student).getInfo() << "\n";
             }
         }
@@ -170,7 +184,6 @@ class Case {
             } else {
                 std::cout << "Keine AGs\n";
             }
-            return;
         }
 
         void showStudents() {
@@ -184,7 +197,6 @@ class Case {
             } else {
                 std::cout << "Keine Teilnehmer";
             }
-            return;
         }
 
         void addCourses() {
@@ -207,7 +219,6 @@ class Case {
                     adding_courses = false;
                 }
             }
-            return;
         }
         void removeCourses() {
             bool removing_courses = true;
@@ -223,7 +234,6 @@ class Case {
                     removing_courses = false;
                 }
             }
-            return;
         }
 
         void addStudents() {
@@ -251,7 +261,6 @@ class Case {
                     adding_students = false;
                 }
             }
-            return;
         }
         void removeStudents() {
             bool removing_students = true;
@@ -266,15 +275,24 @@ class Case {
                     removing_students = false;
                 }
             }
-            return;
+        }
+
+        void initCourseMaps() {
+            for (auto course : courses) {
+                course.initMap(courses);
+            }
         }
         void FCFSAssignment() {
             // First Come First Serve Assignment
             for (int i_wish = 0; i_wish< N_PREFS; i_wish++) {
+                std::cout << "Wish:\n" << i_wish;
                 for (Student student : students) {
+                    std::cout << "stud: ";
                     if (student.getCurrScore() > std::pow(i_wish, 2)) {
+                        std::cout << "current Score > than wish^2\n";
                         Course* wished_course = student.getWish(i_wish);
                         if ((*wished_course).isNotFull()) {
+                            std::cout << "Accepted!";
                             (*wished_course).moveStudentIn(&student);
                             student.updateCurrentScore(wished_course);
                         }
@@ -339,6 +357,7 @@ int main() {
                 break;
         }
     }
+    useCase.initCourseMaps();
     std::cout << "Anzahl der Wuensche pro Teilnehmer eingeben:";
     std::cin >> N_PREFS;
     while (students_edit) {
