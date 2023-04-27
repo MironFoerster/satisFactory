@@ -26,7 +26,7 @@ int indexof(T& obj, std::vector<T>& vec) {
 
 
         struct Path {
-            std::vector<std::pair<Course*, Student*>> path;
+            std::vector<std::pair<Course, Student*>> path;
             int score;
         };
 
@@ -127,8 +127,8 @@ class Course {
             }
         }
 
-        std::pair<Student*, int> getBestMoveToCourse(Course* course) {
-            return moveToCourseMap[course][0];
+        std::pair<Student*, int> getBestMoveToCourse(Course course) {
+            return moveToCourseMap[&course][0];
         }
 
         void moveStudentIn(Student* student) {
@@ -181,7 +181,6 @@ class Course {
 class Case {
     private:
         std::vector<Course> courses;
-        std::vector<Course*> courses_ptr;
         std::vector<Student> students;
     public:
         int getNumCourses() {
@@ -240,17 +239,11 @@ class Case {
                     Course course(name, max_studs, info);
                     courses.push_back(course);
                     std::cout << course.getName() << "\n";
-                    courses_ptr.push_back(&course);
                     std::cout << (*&course).getName() << "\n";
                     std::cout << "AG " + name + " mit " + std::to_string(max_studs) + " Plaetzen hinzugefuegt";
                 } else {
                     adding_courses = false;
                 }
-            }
-            std::cout << "coursesptr\n";
-            std::cout << courses_ptr.size() << "\n";
-            for (auto student : courses_ptr) {
-                std::cout << (*student).getName() << "\n";
             }
         }
 
@@ -336,19 +329,19 @@ class Case {
             }
         }
 
-        void moveStudFromTo(Student* student, Course* from, Course* to) {
-            std::cout << "Move " << (*student).getName() << " from " << (*from).getName() << " to " << (*to).getName() << "\n";
+        void moveStudFromTo(Student* student, Course from, Course to) {
+            std::cout << "Move " << (*student).getName() << " from " << from.getName() << " to " << to.getName() << "\n";
             std::cout << "out\n";
-            (*from).moveStudentOut(student);
+            from.moveStudentOut(student);
             std::cout << "in\n";
-            (*to).moveStudentIn(student);
+            to.moveStudentIn(student);
             std::cout << "done\n";
         }
 
         void executePath(Path path) {
-            Course* to_course = path.path[0].first;
+            Course to_course = path.path[0].first;
             for (int i_node = 1; i_node < path.path.size(); i_node++) {
-                std::pair<Course*, Student*> node = path.path[i_node];
+                std::pair<Course, Student*> node = path.path[i_node];
                 std::cout << "bef\n";
                 if ((*node.second).getName() != "") {
                     moveStudFromTo(node.second, node.first, to_course);
@@ -358,24 +351,24 @@ class Case {
             }
         }
 
-        Path findBestPath(int i_course, std::vector<Course*> left_courses) {
-            Course* curr_course = left_courses[i_course];
+        Path findBestPath(int i_course, std::vector<Course> left_courses) {
+            Course curr_course = left_courses[i_course];
             left_courses.erase(left_courses.begin() + i_course);
 
-            if ((*curr_course).isNotFull()) {
+            if (curr_course.isNotFull()) {
                 // initiate tree collapse
-                Path path_tip {std::vector<std::pair<Course*, Student*>> {{curr_course, {}}}, 0};
+                Path path_tip {std::vector<std::pair<Course, Student*>> {{curr_course, {}}}, 0};
                 return path_tip;
             } else {
                 // continue building tree
                 Path best_path = findBestPath(0, left_courses);
-                std::pair best_move = (*curr_course).getBestMoveToCourse(left_courses[0]);
-                best_path.path.push_back(std::pair<Course*, Student*> (curr_course, best_move.first));
+                std::pair best_move = curr_course.getBestMoveToCourse(left_courses[0]);
+                best_path.path.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
                 best_path.score += best_move.second;
                 for (int i=1; i < left_courses.size(); i++) {
                     Path temp_path = findBestPath(i, left_courses);
-                    std::pair best_move = (*curr_course).getBestMoveToCourse(left_courses[i]);
-                    temp_path.path.push_back(std::pair<Course*, Student*> (curr_course, best_move.first));
+                    std::pair best_move = curr_course.getBestMoveToCourse(left_courses[i]);
+                    temp_path.path.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
                     temp_path.score += best_move.second;
 
                     if (temp_path.score < best_path.score) {
@@ -403,15 +396,15 @@ class Case {
                         Path best_pref_path;
                         
                         if ((*pref).isNotFull()) {
-                            best_pref_path = Path {std::vector<std::pair<Course*, Student*>> {{pref, {}}}, 0};
+                            best_pref_path = Path {std::vector<std::pair<Course, Student*>> {{(*pref), {}}}, 0};
                             std::cout << "nonfull\n";
                         } else {
-                            best_pref_path = findBestPath(indexof<Course>((*pref), courses), courses_ptr);
+                            best_pref_path = findBestPath(indexof<Course>((*pref), courses), courses);
                             std::cout << "full\n";
                         }
                         // append path root
                         
-                        best_pref_path.path.push_back(std::pair<Course*, Student*> {&unassignedCourse, &student});
+                        best_pref_path.path.push_back(std::pair<Course, Student*> {unassignedCourse, &student});
                         
                         best_pref_path.score += student.getMoveToScoreD(pref);
                         if (best_path.score > best_pref_path.score || best_path.path.size()==0) {
