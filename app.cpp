@@ -5,9 +5,6 @@
 #include <vector>
 #include <cmath>
 #include <map>
-#include <Windows.h>
-#include <cstdio>
-#include <Windows.h>
 #include <cstdio>
 
 int N_PREFS;
@@ -29,7 +26,7 @@ int indexof(T& obj, std::vector<T>& vec) {
 
 
         struct Path {
-            std::vector<std::pair<Course, Student*>> path;
+            std::vector<std::pair<Course*, Student*>> path;
             int score;
         };
 
@@ -54,8 +51,6 @@ class Student {
         }
 
         std::string getInfo() {
-                        std::cout << "info!!!" << info;
-
             return info;
         }
 
@@ -77,7 +72,6 @@ class Student {
 
         int getCourseScore(Course* course) {
             int index = indexof<Course*>(course, prefs);
-            std::cout << "indexof!!!" << index;
             // If element was found
             if (index == -1) {
                 return std::pow(N_PREFS, 2);
@@ -108,11 +102,16 @@ class Course {
         // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
         std::map<Course*, std::vector<std::pair<Student*, int>>> moveToCourseMap;
     public:
-        Course(std::string name_in = "", int max_studs_in = 0, std::string info_in = "") {
+        Course(std::string name_in = "dflt", int max_studs_in = 0, std::string info_in = "") {
             name = name_in;
             max_studs = max_studs_in;
             info = info_in;
         };
+        
+        bool operator==(const Course& other) {
+            return name == other.name;
+        }
+
         std::string getInfo() {
             return info;
         }
@@ -128,14 +127,14 @@ class Course {
             }
         }
 
-        std::pair<Student*, int> getBestMoveToCourse(Course course) {
-            return moveToCourseMap[&course][0];
+        std::pair<Student*, int> getBestMoveToCourse(Course* course) {
+            return moveToCourseMap[course][0];
         }
 
         void moveStudentIn(Student* student) {
             students.push_back(student);
-
             for (auto [course, sorted_students] : moveToCourseMap) {
+                std::cout << (*course).getName() << "\n";
                 std::pair<Student*, int> student_scoreD(student, (*student).getMoveToScoreD(course));
                 auto is_better = [&student_scoreD](std::pair<Student*, int> other_student_scoreD) {
                     return student_scoreD.second >= other_student_scoreD.second;
@@ -147,14 +146,19 @@ class Course {
 
         void moveStudentOut(Student* student) {
             auto iter = std::find(students.begin(), students.end(), student);
-            students.erase(iter);
-
-            for (auto& [course, sorted_students] : moveToCourseMap) {
-                auto is_student = [&student](std::pair<Student*, int> other_student_scoreD) {
-                    return student == other_student_scoreD.first;
-                };
-                auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_student);
-                sorted_students.erase(iter);
+            
+            if (iter != students.end()) {
+                std::cout << "found\n";
+                students.erase(iter);
+                for (auto& [course, sorted_students] : moveToCourseMap) {
+                    auto is_student = [&student](std::pair<Student*, int> other_student_scoreD) {
+                        return student == other_student_scoreD.first;
+                    };
+                    auto iter = std::find_if(sorted_students.begin(), sorted_students.end(), is_student);
+                    sorted_students.erase(iter);
+                }
+            } else {
+                std::cout << "notfound\n"; // happens when removing from dflt
             }
         }
 
@@ -177,8 +181,8 @@ class Course {
 class Case {
     private:
         std::vector<Course> courses;
+        std::vector<Course*> courses_ptr;
         std::vector<Student> students;
-
     public:
         int getNumCourses() {
             return courses.size();
@@ -213,6 +217,13 @@ class Case {
             }
         }
 
+        void reserveCourses(int n_courses) {
+            courses.reserve(n_courses);
+        }
+        void reserveStudents(int n_students) {
+            courses.reserve(n_students);
+        }
+
         void addCourses() {
             bool adding_courses = true;
             while (adding_courses) {
@@ -228,12 +239,21 @@ class Case {
                     info = name + "  " + std::to_string(max_studs);
                     Course course(name, max_studs, info);
                     courses.push_back(course);
+                    std::cout << course.getName() << "\n";
+                    courses_ptr.push_back(&course);
+                    std::cout << (*&course).getName() << "\n";
                     std::cout << "AG " + name + " mit " + std::to_string(max_studs) + " Plaetzen hinzugefuegt";
                 } else {
                     adding_courses = false;
                 }
             }
+            std::cout << "coursesptr\n";
+            std::cout << courses_ptr.size() << "\n";
+            for (auto student : courses_ptr) {
+                std::cout << (*student).getName() << "\n";
+            }
         }
+
         void removeCourses() {
             bool removing_courses = true;
             while (removing_courses) {
@@ -316,45 +336,46 @@ class Case {
             }
         }
 
-        void moveBestStudFromTo(Course from, Course to) {
-            Student* student = from.getBestMoveToCourse(to).first;
-            from.moveStudentOut(student);
-            to.moveStudentIn(student);
-        }
-        void moveStudFromTo(Student* student, Course from, Course to) {
-            from.moveStudentOut(student);
-            to.moveStudentIn(student);
+        void moveStudFromTo(Student* student, Course* from, Course* to) {
+            std::cout << "Move " << (*student).getName() << " from " << (*from).getName() << " to " << (*to).getName() << "\n";
+            std::cout << "out\n";
+            (*from).moveStudentOut(student);
+            std::cout << "in\n";
+            (*to).moveStudentIn(student);
+            std::cout << "done\n";
         }
 
         void executePath(Path path) {
-            Course to_course = path.path[0].first;
+            Course* to_course = path.path[0].first;
             for (int i_node = 1; i_node < path.path.size(); i_node++) {
-                std::pair<Course, Student*> node = path.path[i_node];
-                moveStudFromTo(node.second, node.first, to_course);
+                std::pair<Course*, Student*> node = path.path[i_node];
+                std::cout << "bef\n";
+                if ((*node.second).getName() != "") {
+                    moveStudFromTo(node.second, node.first, to_course);
+                } else {std::cout << "nnnnnnnnooooootttfound\n";}
+                std::cout << "aft\n";
                 to_course = node.first;
             }
         }
 
-        Path findBestPath(int i_course, std::vector<Course> left_courses) {
-            Course curr_course = left_courses[i_course];
+        Path findBestPath(int i_course, std::vector<Course*> left_courses) {
+            Course* curr_course = left_courses[i_course];
             left_courses.erase(left_courses.begin() + i_course);
 
-            if (curr_course.isNotFull()) {
+            if ((*curr_course).isNotFull()) {
                 // initiate tree collapse
-                Path path_tip;
-                path_tip.path.push_back(std::pair<Course, Student*> (curr_course, {}));
-                path_tip.score = 0;
+                Path path_tip {std::vector<std::pair<Course*, Student*>> {{curr_course, {}}}, 0};
                 return path_tip;
             } else {
                 // continue building tree
                 Path best_path = findBestPath(0, left_courses);
-                std::pair best_move = curr_course.getBestMoveToCourse(left_courses[0]);
-                best_path.path.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
+                std::pair best_move = (*curr_course).getBestMoveToCourse(left_courses[0]);
+                best_path.path.push_back(std::pair<Course*, Student*> (curr_course, best_move.first));
                 best_path.score += best_move.second;
                 for (int i=1; i < left_courses.size(); i++) {
                     Path temp_path = findBestPath(i, left_courses);
-                    std::pair best_move = curr_course.getBestMoveToCourse(left_courses[i]);
-                    temp_path.path.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
+                    std::pair best_move = (*curr_course).getBestMoveToCourse(left_courses[i]);
+                    temp_path.path.push_back(std::pair<Course*, Student*> (curr_course, best_move.first));
                     temp_path.score += best_move.second;
 
                     if (temp_path.score < best_path.score) {
@@ -368,27 +389,35 @@ class Case {
         void smartAssignment() {
             bool optimal = false;
             Course unassignedCourse;
+            std::cout << "\n\n";
             while (!optimal) {
+                std::cout << "nonoptimal\n";
                 optimal = true;
                 for (auto student : students) {
+                    std::cout << student.getName() << "\n";
                     // find best scored move for current student
                     Path best_path;
                     for (auto pref : student.getPrefs()) {
+                        std::cout << (*pref).getName() << "\n";
                         // find best path for each of the preferences
                         Path best_pref_path;
                         
                         if ((*pref).isNotFull()) {
-                            best_pref_path = Path {std::vector<std::pair<Course, Student*>> {{(*pref), {}}}, 0};
-                            continue;
+                            best_pref_path = Path {std::vector<std::pair<Course*, Student*>> {{pref, {}}}, 0};
+                            std::cout << "nonfull\n";
                         } else {
-                            best_pref_path = findBestPath(indexof<Course>((*pref), courses), courses);
+                            best_pref_path = findBestPath(indexof<Course>((*pref), courses), courses_ptr);
+                            std::cout << "full\n";
                         }
                         // append path root
-                        best_pref_path.path.push_back(std::pair<Course, Student*> {unassignedCourse, &student});
+                        
+                        best_pref_path.path.push_back(std::pair<Course*, Student*> {&unassignedCourse, &student});
+                        
                         best_pref_path.score += student.getMoveToScoreD(pref);
-                        if (best_path.score > best_pref_path.score) {
+                        if (best_path.score > best_pref_path.score || best_path.path.size()==0) {
                             best_path = best_pref_path;
                         }
+                    
                     }
                     
                     // execute best path if it decreases the overall score
@@ -422,8 +451,11 @@ int main() {
     std::cout << "Zuerst muessen alle AGs und deren maximale Teilnehmerzahl eingetragen werden:\n";
     bool course_edit = true;
     bool students_edit = false;
-    while (course_edit) {
-        
+    std::cout << "Anzahl AGs eingeben:";
+    int n_courses;
+    std::cin >> n_courses;
+    useCase.reserveCourses(n_courses);
+    while (course_edit) {        
         std::cout << "Aktionen:\n";
         std::cout << "\t1 - AGs hinzufuegen\n";
         std::cout << "\t2 - AGs entfernen\n";
@@ -449,6 +481,10 @@ int main() {
                 break;
         }
     }
+    std::cout << "Anzahl Teilnehmer eingeben:";
+    int n_students;
+    std::cin >> n_students;
+    useCase.reserveCourses(n_students);
     useCase.initCourseMaps();
     std::cout << "Anzahl der Wuensche pro Teilnehmer eingeben:";
     std::cin >> N_PREFS;
