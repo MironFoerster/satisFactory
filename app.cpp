@@ -28,6 +28,11 @@ int indexof(T& obj, std::vector<T>& vec) {
 }
 
 
+        struct Path {
+            std::vector<std::pair<Course, Student*>> path;
+            int score;
+        };
+
 class Student {
     private:
         std::string name;
@@ -41,7 +46,7 @@ class Student {
             name = name_in;
             prefs = prefs_in;
             info = info_in;
-            curr_score = std::pow(N_PREFS, 2);
+            curr_score = std::pow(N_PREFS, 2)+1;
         };
 
         bool operator==(const Student& other) {
@@ -64,6 +69,10 @@ class Student {
 
         Course* getWish(int i_wish) {
             return prefs[i_wish];
+        }
+
+        std::vector<Course*> getPrefs() {
+            return prefs;
         }
 
         int getCourseScore(Course* course) {
@@ -99,7 +108,7 @@ class Course {
         // map (course -> (sorted)vector); vectors of pairs sorted by pair.second; pairs <student, score_in_course>
         std::map<Course*, std::vector<std::pair<Student*, int>>> moveToCourseMap;
     public:
-        Course(std::string name_in, int max_studs_in, std::string info_in) {
+        Course(std::string name_in = "", int max_studs_in = 0, std::string info_in = "") {
             name = name_in;
             max_studs = max_studs_in;
             info = info_in;
@@ -164,8 +173,6 @@ class Course {
             }
         }
 };
-
-
 
 class Case {
     private:
@@ -314,40 +321,82 @@ class Case {
             from.moveStudentOut(student);
             to.moveStudentIn(student);
         }
+        void moveStudFromTo(Student* student, Course from, Course to) {
+            from.moveStudentOut(student);
+            to.moveStudentIn(student);
+        }
 
-        std::pair<std::vector<std::pair<Course, Student*>>, int> findBestPath(int i_course, std::vector<Course> left_courses) {
+        void executePath(Path path) {
+            Course to_course = path.path[0].first;
+            for (int i_node = 1; i_node < path.path.size(); i_node++) {
+                std::pair<Course, Student*> node = path.path[i_node];
+                moveStudFromTo(node.second, node.first, to_course);
+                to_course = node.first;
+            }
+        }
+
+        Path findBestPath(int i_course, std::vector<Course> left_courses) {
             Course curr_course = left_courses[i_course];
             left_courses.erase(left_courses.begin() + i_course);
 
             if (curr_course.isNotFull()) {
                 // initiate tree collapse
-                std::pair<std::vector<std::pair<Course, Student*>>, int> path_tip;
-                path_tip.first.push_back(std::pair<Course, Student*> (curr_course, {}));
-                path_tip.second = 0;
+                Path path_tip;
+                path_tip.path.push_back(std::pair<Course, Student*> (curr_course, {}));
+                path_tip.score = 0;
                 return path_tip;
             } else {
                 // continue building tree
-                std::pair<std::vector<std::pair<Course, Student*>>, int> path = findBestPath(0, left_courses);
+                Path best_path = findBestPath(0, left_courses);
                 std::pair best_move = curr_course.getBestMoveToCourse(left_courses[0]);
-                path.first.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
-                path.second += best_move.second;
+                best_path.path.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
+                best_path.score += best_move.second;
                 for (int i=1; i < left_courses.size(); i++) {
-                    std::pair<std::vector<std::pair<Course, Student*>>, int> temp_path = findBestPath(i, left_courses);
+                    Path temp_path = findBestPath(i, left_courses);
                     std::pair best_move = curr_course.getBestMoveToCourse(left_courses[i]);
-                    temp_path.first.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
-                    temp_path.second += best_move.second;
+                    temp_path.path.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
+                    temp_path.score += best_move.second;
 
-                    if (temp_path.second < path.second) {
-                        path = temp_path;
+                    if (temp_path.score < best_path.score) {
+                        best_path = temp_path;
                     }
                 }
-                return path;
+                return best_path;
             }
         }
 
         void smartAssignment() {
-            for (auto student : students) {
-                
+            bool optimal = false;
+            Course unassignedCourse;
+            while (!optimal) {
+                optimal = true;
+                for (auto student : students) {
+                    // find best scored move for current student
+                    Path best_path;
+                    for (auto pref : student.getPrefs()) {
+                        // find best path for each of the preferences
+                        Path best_pref_path;
+                        
+                        if ((*pref).isNotFull()) {
+                            best_pref_path = Path {std::vector<std::pair<Course, Student*>> {{(*pref), {}}}, 0};
+                            continue;
+                        } else {
+                            best_pref_path = findBestPath(indexof<Course>((*pref), courses), courses);
+                        }
+                        // append path root
+                        best_pref_path.path.push_back(std::pair<Course, Student*> {unassignedCourse, &student});
+                        best_pref_path.score += student.getMoveToScoreD(pref);
+                        if (best_path.score > best_pref_path.score) {
+                            best_path = best_pref_path;
+                        }
+                    }
+                    
+                    // execute best path if it decreases the overall score
+                    if (best_path.score < 0) {
+                        executePath(best_path);
+                        optimal = false;
+                    }
+                }
             }
 
         }
@@ -425,7 +474,8 @@ int main() {
             case 4:
                 course_edit = true;
                 students_edit = false;
-                useCase.FCFSAssignment();
+                // useCase.FCFSAssignment();
+                useCase.smartAssignment();
                 //useCase.optimizeAssignment();
                 useCase.displayAssignment();
                 break;
