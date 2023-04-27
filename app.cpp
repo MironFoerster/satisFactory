@@ -37,7 +37,7 @@ class Student {
         int curr_score;
 
     public:
-        Student(std::string name_in, std::vector<Course*> prefs_in, std::string info_in) {
+        Student(std::string name_in = "", std::vector<Course*> prefs_in = std::vector<Course*> (), std::string info_in = "") {
             name = name_in;
             prefs = prefs_in;
             info = info_in;
@@ -117,6 +117,10 @@ class Course {
                     moveToCourseMap[&course] = std::vector<std::pair<Student*, int>>();
                 }
             }
+        }
+
+        std::pair<Student*, int> getBestMoveToCourse(Course course) {
+            return moveToCourseMap[&course][0];
         }
 
         void moveStudentIn(Student* student) {
@@ -305,10 +309,45 @@ class Case {
             }
         }
 
+        void moveBestStudFromTo(Course from, Course to) {
+            Student* student = from.getBestMoveToCourse(to).first;
+            from.moveStudentOut(student);
+            to.moveStudentIn(student);
+        }
+
+        std::pair<std::vector<std::pair<Course, Student*>>, int> findBestPath(int i_course, std::vector<Course> left_courses) {
+            Course curr_course = left_courses[i_course];
+            left_courses.erase(left_courses.begin() + i_course);
+
+            if (curr_course.isNotFull()) {
+                // initiate tree collapse
+                std::pair<std::vector<std::pair<Course, Student*>>, int> path_tip;
+                path_tip.first.push_back(std::pair<Course, Student*> (curr_course, {}));
+                path_tip.second = 0;
+                return path_tip;
+            } else {
+                // continue building tree
+                std::pair<std::vector<std::pair<Course, Student*>>, int> path = findBestPath(0, left_courses);
+                std::pair best_move = curr_course.getBestMoveToCourse(left_courses[0]);
+                path.first.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
+                path.second += best_move.second;
+                for (int i=1; i < left_courses.size(); i++) {
+                    std::pair<std::vector<std::pair<Course, Student*>>, int> temp_path = findBestPath(i, left_courses);
+                    std::pair best_move = curr_course.getBestMoveToCourse(left_courses[i]);
+                    temp_path.first.push_back(std::pair<Course, Student*> (curr_course, best_move.first));
+                    temp_path.second += best_move.second;
+
+                    if (temp_path.second < path.second) {
+                        path = temp_path;
+                    }
+                }
+                return path;
+            }
+        }
+
         void smartAssignment() {
             for (auto student : students) {
-
-
+                
             }
 
         }
