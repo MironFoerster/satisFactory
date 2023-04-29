@@ -31,4 +31,7 @@
 *.out
 *.app
 
-test.cpp
+# Custom
+*
+!app.cpp
+!README.md
